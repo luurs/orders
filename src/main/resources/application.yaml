@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: orders_db
+  datasource:
+    url: jdbc:postgresql://localhost:5435/orders_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+server:
+  port: 8081

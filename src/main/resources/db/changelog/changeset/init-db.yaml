@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      author: lera
+      id: create-table-order
+      changes:
+        - sqlFile:
+            path: sql/create-table-orders.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      author: lera
+      id: create-table-order-good
+      changes:
+        - sqlFile:
+            path: sql/create-table-orders-good.sql
+            relativeToChangelogFile: true
