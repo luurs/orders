@@ -42,6 +42,7 @@ public class BaseIntegrationTest {
 
     @AfterEach
     void cleanUp() {
-        jdbcTemplate.execute("truncate table good cascade;");
+        jdbcTemplate.execute("truncate table orders cascade;");
+        jdbcTemplate.execute("truncate table orders_good cascade;");
     }
 }
