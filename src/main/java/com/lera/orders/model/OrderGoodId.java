@@ -12,7 +12,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
-public class OrdersGoodId implements Serializable {
+public class OrderGoodId implements Serializable {
 
     @Column(name = "order_id")
     private long orderId;

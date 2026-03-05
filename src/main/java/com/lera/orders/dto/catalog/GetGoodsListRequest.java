@@ -1,4 +1,4 @@
-package com.lera.orders.dto.good;
+package com.lera.orders.dto.catalog;
 
 import java.util.List;
 

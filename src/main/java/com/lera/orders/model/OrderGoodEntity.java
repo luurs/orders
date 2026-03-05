@@ -12,10 +12,10 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @NoArgsConstructor
-public class OrdersGood {
+public class OrderGoodEntity {
 
     @EmbeddedId
-    private OrdersGoodId id;
+    private OrderGoodId id;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -32,9 +32,10 @@ public class OrdersGood {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId("orderId")
     @JoinColumn(name = "order_id", nullable = false)
-    private Orders order;
+    private OrderEntity order;
 
-    public OrdersGood(String name, BigDecimal price, BigDecimal count, BigDecimal sum) {
+    public OrderGoodEntity(OrderGoodId id, String name, BigDecimal price, BigDecimal count, BigDecimal sum) {
+        this.id = id;
         this.name = name;
         this.price = price;
         this.count = count;

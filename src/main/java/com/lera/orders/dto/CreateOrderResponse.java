@@ -1,6 +1,6 @@
 package com.lera.orders.dto;
 
-public record CreateOrderIdResponse(
+public record CreateOrderResponse(
         Long orderId
 ) {
 }

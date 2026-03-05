@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ExceptionValidationHandler {
 
     @ExceptionHandler
-    public ResponseEntity<ValidationResponse> handleException(ValidationException e) {
+    public ResponseEntity<ApiResponse> handleException(ApiException e) {
         return ResponseEntity
                 .status(e.getStatus())
-                .body(new ValidationResponse(e.getMessage(), e.getStatus()));
+                .body(new ApiResponse(e.getMessage(), e.getStatus()));
     }
 }

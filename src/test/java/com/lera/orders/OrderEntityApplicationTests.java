@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class OrdersApplicationTests extends BaseIntegrationTest {
+class OrderEntityApplicationTests extends BaseIntegrationTest {
 
 	@Test
 	void contextLoads() {

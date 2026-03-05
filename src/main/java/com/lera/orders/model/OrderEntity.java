@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -13,7 +14,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Orders {
+public class OrderEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,15 +32,15 @@ public class Orders {
     private OrderStatus status;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrdersGood> goods;
+    private List<OrderGoodEntity> goods = new ArrayList<>();
 
-    public Orders (String userId, BigDecimal totalSum, OrderStatus status) {
+    public OrderEntity(String userId, BigDecimal totalSum, OrderStatus status) {
         this.userId = userId;
         this.totalSum = totalSum;
         this.status = status;
     }
 
-    public void addGood(OrdersGood good) {
+    public void addGood(OrderGoodEntity good) {
         goods.add(good);
         good.setOrder(this);
     }

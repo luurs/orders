@@ -2,21 +2,10 @@ package com.lera.orders.util;
 
 import org.springframework.http.HttpStatus;
 
-public class ValidationException extends RuntimeException {
-    private final String message;
-    private final HttpStatus status;
+public class ValidationException extends ApiException {
 
-    public ValidationException(String message, HttpStatus status) {
-        this.message = message;
-        this.status = status;
+    public ValidationException(String message) {
+        super(message, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
-    @Override
-    public String getMessage() {
-        return message;
-    }
-
-    public HttpStatus getStatus() {
-        return status;
-    }
 }

@@ -4,12 +4,11 @@ import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public class ValidationResponse {
+public class ApiResponse {
     private final String message;
     private final HttpStatus status;
 
-    public ValidationResponse(String message, HttpStatus status) {
-        super();
+    public ApiResponse(String message, HttpStatus status) {
         this.message = message;
         this.status = status;
     }

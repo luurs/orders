@@ -1,7 +1,8 @@
 package com.lera.orders.validator;
 
 import com.lera.orders.dto.CreateOrderRequest;
-import com.lera.orders.dto.good.GetGoodsListResponse;
+import com.lera.orders.dto.catalog.GetGoodsListResponse;
+import com.lera.orders.util.ApiException;
 import com.lera.orders.util.ValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -13,9 +14,6 @@ import java.util.stream.Collectors;
 
 @Component
 public class OrderValidator {
-
-    // todo прохождение валидации json'а с таблицами БД
-    // todo если какая-то из валидаций не проходит, выбросить ошибку валидации - сделать ValidationException
 
     public void validateOrder(CreateOrderRequest orderRequest, GetGoodsListResponse goodsList) {
         validatePrice(orderRequest, goodsList);
@@ -33,15 +31,15 @@ public class OrderValidator {
                         ));
 
         for (CreateOrderRequest.GoodDto good : orderRequest.goods()) {
-            var requestId = good.externalId();
-            GetGoodsListResponse.GoodDto found = goodsMap.get(requestId);
+            var externalId = good.externalId();
+            GetGoodsListResponse.GoodDto found = goodsMap.get(externalId);
 
             if (found == null) {
-                throw new RuntimeException("Good not found: " + requestId);
+                throw new ApiException("Good not found: " + externalId, HttpStatus.NOT_FOUND);
             }
 
             if (!good.price().equals(found.price())) {
-                throw new ValidationException("Цена товара в запросе не совпадает с ценой товара в сервисе catalog", HttpStatus.UNPROCESSABLE_ENTITY);
+                throw new ValidationException("Цена товара в запросе не совпадает с ценой товара в сервисе catalog");
             }
         }
 
@@ -57,7 +55,7 @@ public class OrderValidator {
                 )
                 .findFirst()
                 .ifPresent(good -> {
-                    throw new ValidationException("Сумма товара не соответствует sum, externalId: " + good.externalId(), HttpStatus.UNPROCESSABLE_ENTITY);
+                    throw new ValidationException("Сумма товара не соответствует sum, externalId: " + good.externalId());
                 });
 
     }
@@ -69,7 +67,7 @@ public class OrderValidator {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (calculatedSum.compareTo(orderRequest.sum()) != 0) {
-            throw new ValidationException("Сумма заказа не равна сумме товаров", HttpStatus.UNPROCESSABLE_ENTITY);
+            throw new ValidationException("Сумма заказа не равна сумме товаров");
         }
     }
 }

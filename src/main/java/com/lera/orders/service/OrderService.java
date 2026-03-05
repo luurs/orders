@@ -1,14 +1,14 @@
 package com.lera.orders.service;
 
-import com.lera.orders.clients.GoodClient;
+import com.lera.orders.clients.CatalogClient;
 import com.lera.orders.dto.CreateOrderRequest;
-import com.lera.orders.dto.good.GetGoodsListRequest;
+import com.lera.orders.dto.catalog.GetGoodsListRequest;
 import com.lera.orders.model.OrderStatus;
-import com.lera.orders.model.Orders;
-import com.lera.orders.model.OrdersGood;
-import com.lera.orders.model.OrdersGoodId;
-import com.lera.orders.repository.OrdersGoodRepository;
-import com.lera.orders.repository.OrdersRepository;
+import com.lera.orders.model.OrderEntity;
+import com.lera.orders.model.OrderGoodEntity;
+import com.lera.orders.model.OrderGoodId;
+import com.lera.orders.repository.OrderGoodRepository;
+import com.lera.orders.repository.OrderRepository;
 import com.lera.orders.validator.OrderValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,39 +23,38 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final OrdersRepository ordersRepository;
-    private final OrdersGoodRepository ordersGoodRepository;
-    private final GoodClient goodClient;
+    private final OrderRepository orderRepository;
+    private final OrderGoodRepository orderGoodRepository;
+    private final CatalogClient catalogClient;
     private final OrderValidator orderValidator;
 
     @Transactional
     public Long createOrder(String userId, BigDecimal sum, List<CreateOrderRequest.GoodDto> goods) {
         var orderRequest = new CreateOrderRequest(userId, sum, goods);
-        List<String> listExternalIds = goods.stream()
+        List<String> externalIds = goods.stream()
                 .map(CreateOrderRequest.GoodDto::externalId)
                 .toList();
-        var goodsList = goodClient.getGoodsList(new GetGoodsListRequest(listExternalIds));
+        var goodsList = catalogClient.getGoodsList(new GetGoodsListRequest(externalIds));
 
         orderValidator.validateOrder(orderRequest, goodsList);  // валидация, возможны исключения
 
-        Orders order = new Orders(userId, sum, OrderStatus.NEW);
-        order.setGoods(new ArrayList<>());
+        OrderEntity order = new OrderEntity(userId, sum, OrderStatus.NEW);
 
         goods.forEach(dto -> {
 
-            OrdersGoodId id = new OrdersGoodId();
+            OrderGoodId id = new OrderGoodId();
             id.setExternalId(dto.externalId());
-            OrdersGood good = new OrdersGood(
+            OrderGoodEntity good = new OrderGoodEntity(
+                    id,
                     dto.name(),
                     dto.price(),
                     dto.count(),
                     dto.sum()
             );
-            good.setId(id);
             order.addGood(good);
         });
 
-        ordersRepository.save(order);
+        orderRepository.save(order);
 
         return order.getOrderId();
     }

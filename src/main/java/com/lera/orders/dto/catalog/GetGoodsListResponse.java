@@ -1,4 +1,4 @@
-package com.lera.orders.dto.good;
+package com.lera.orders.dto.catalog;
 
 import java.math.BigDecimal;
 import java.util.List;

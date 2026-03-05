@@ -1,6 +1,6 @@
 package com.lera.orders.controller;
 
-import com.lera.orders.dto.CreateOrderIdResponse;
+import com.lera.orders.dto.CreateOrderResponse;
 import com.lera.orders.dto.CreateOrderRequest;
 import com.lera.orders.service.OrderService;
 import lombok.AllArgsConstructor;
@@ -17,8 +17,8 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping("/create")
-    public CreateOrderIdResponse create(@RequestBody CreateOrderRequest request) {
+    public CreateOrderResponse create(@RequestBody CreateOrderRequest request) {
         var orderId = orderService.createOrder(request.userId(), request.sum(), request.goods());
-        return new CreateOrderIdResponse(orderId);
+        return new CreateOrderResponse(orderId);
     }
 }
