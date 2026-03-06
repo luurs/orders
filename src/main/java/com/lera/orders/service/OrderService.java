@@ -11,15 +11,16 @@ import com.lera.orders.repository.OrderGoodRepository;
 import com.lera.orders.repository.OrderRepository;
 import com.lera.orders.validator.OrderValidator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class OrderService {
 
@@ -54,9 +55,7 @@ public class OrderService {
             order.addGood(good);
         });
 
-        orderRepository.save(order);
-
-        return order.getOrderId();
+        return orderRepository.save(order).getOrderId();
     }
 
 }

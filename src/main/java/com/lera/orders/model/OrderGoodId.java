@@ -15,7 +15,7 @@ import java.io.Serializable;
 public class OrderGoodId implements Serializable {
 
     @Column(name = "order_id")
-    private long orderId;
+    private Long orderId;
 
     @Column(name = "external_id", length = 100)
     private String externalId;
