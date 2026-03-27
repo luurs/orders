@@ -1,7 +1,10 @@
 package com.lera.orders.validator;
 
+import com.lera.orders.dto.ConfirmPaymentRequest;
 import com.lera.orders.dto.CreateOrderRequest;
 import com.lera.orders.dto.catalog.GetGoodsListResponse;
+import com.lera.orders.model.OrderEntity;
+import com.lera.orders.model.OrderStatus;
 import com.lera.orders.util.ApiException;
 import com.lera.orders.util.ValidationException;
 import org.springframework.http.HttpStatus;
@@ -19,6 +22,26 @@ public class OrderValidator {
         validatePrice(orderRequest, goodsList);
         validateSum(orderRequest);
         validateFinalSum(orderRequest);
+    }
+
+    public void validatePayment(OrderEntity order, ConfirmPaymentRequest orderRequest) {
+        validateStatus(order);
+        validateSum(order, orderRequest);
+    }
+
+
+    // валидация статуса заказа NEW иначе ошибка
+    private void validateStatus(OrderEntity order) {
+        if (!order.getStatus().equals(OrderStatus.NEW)) {
+            throw new ValidationException("Invalid order status");
+        }
+    }
+
+    // валидация суммы в запросе с суммой в заказе
+    private void validateSum(OrderEntity order, ConfirmPaymentRequest orderRequest) {
+        if (!order.getTotalSum().equals(orderRequest.sum())) {
+            throw new ValidationException("The amount in the request does not match the order amount in the database");
+        }
     }
 
     private void validatePrice(CreateOrderRequest orderRequest, GetGoodsListResponse goodsList) {
@@ -39,7 +62,7 @@ public class OrderValidator {
             }
 
             if (!good.price().equals(found.price())) {
-                throw new ValidationException("Цена товара в запросе не совпадает с ценой товара в сервисе catalog");
+                throw new ValidationException("The price of the product in the request does not match the price of the product in the catalog service");
             }
         }
 
@@ -55,7 +78,7 @@ public class OrderValidator {
                 )
                 .findFirst()
                 .ifPresent(good -> {
-                    throw new ValidationException("Сумма товара не соответствует sum, externalId: " + good.externalId());
+                    throw new ValidationException("The amount of the item does not match the sum, externalId: " + good.externalId());
                 });
 
     }
@@ -67,7 +90,7 @@ public class OrderValidator {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (calculatedSum.compareTo(orderRequest.sum()) != 0) {
-            throw new ValidationException("Сумма заказа не равна сумме товаров");
+            throw new ValidationException("The order amount is not equal to the total amount of goods");
         }
     }
 }

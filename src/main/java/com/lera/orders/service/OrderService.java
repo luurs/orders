@@ -1,6 +1,7 @@
 package com.lera.orders.service;
 
 import com.lera.orders.clients.CatalogClient;
+import com.lera.orders.dto.ConfirmPaymentRequest;
 import com.lera.orders.dto.CreateOrderRequest;
 import com.lera.orders.dto.catalog.GetGoodsListRequest;
 import com.lera.orders.model.OrderStatus;
@@ -9,10 +10,13 @@ import com.lera.orders.model.OrderGoodEntity;
 import com.lera.orders.model.OrderGoodId;
 import com.lera.orders.repository.OrderGoodRepository;
 import com.lera.orders.repository.OrderRepository;
+import com.lera.orders.util.ApiException;
+import com.lera.orders.util.ValidationException;
 import com.lera.orders.validator.OrderValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -25,7 +29,6 @@ import java.util.List;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final OrderGoodRepository orderGoodRepository;
     private final CatalogClient catalogClient;
     private final OrderValidator orderValidator;
 
@@ -39,7 +42,7 @@ public class OrderService {
 
         orderValidator.validateOrder(orderRequest, goodsList);  // валидация, возможны исключения
 
-        OrderEntity order = new OrderEntity(userId, sum, OrderStatus.NEW);
+        OrderEntity order = new OrderEntity(userId, sum, null, OrderStatus.NEW);
 
         goods.forEach(dto -> {
 
@@ -58,4 +61,18 @@ public class OrderService {
         return orderRepository.save(order).getOrderId();
     }
 
+    @Transactional
+    public void confirmPayment(Long orderId, Long paymentId, BigDecimal sum) {
+        // получить заказ из БД
+        var orderRequest = new ConfirmPaymentRequest(orderId, paymentId, sum);
+        var order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ApiException("Заказ не найден, orderId: " + orderId, HttpStatus.NOT_FOUND));
+
+        // validatePayment();
+        orderValidator.validatePayment(order, orderRequest);
+
+        // обновить заказ в БД (статус PAID, payment из запроса)
+        order.setStatus(OrderStatus.PAID);
+        order.setPaymentId(paymentId);
+    }
 }
