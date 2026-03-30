@@ -1,6 +1,7 @@
 package com.lera.orders.integration.controller;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.lera.orders.dto.ConfirmPaymentRequest;
 import com.lera.orders.dto.CreateOrderRequest;
 import com.lera.orders.integration.BaseIntegrationTest;
 import com.lera.orders.model.OrderStatus;
@@ -16,6 +17,7 @@ import java.util.List;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class OrderControllerIT extends BaseIntegrationTest {
 
@@ -143,5 +145,63 @@ public class OrderControllerIT extends BaseIntegrationTest {
         var orders = jdbcTemplate.query("select * from orders", new DataClassRowMapper<>(OrderTestModel.class));
 
         assertThat(orders.isEmpty()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Проверка подтверждения оплаты")
+    public void confirmPaymentSuccess() {
+        jdbcTemplate.execute(
+                "insert into orders (order_id, user_id, total_sum, status, payment_id) values (1, '4sus', 150.00, 'NEW', NULL)"
+        );
+
+        // when
+        given()
+                .contentType(ContentType.JSON)
+                .body(
+                        new ConfirmPaymentRequest(
+                                1L,
+                                1111L,
+                                new BigDecimal("150.00")
+                        )
+                )
+                .when()
+                .post("/orders/confirmPayment")
+                .then()
+                .statusCode(200);
+
+        //then
+        var order = jdbcTemplate.query("select * from orders", new DataClassRowMapper<>(OrderTestModel.class)).getFirst();
+
+        assertThat(order.getStatus().equals(OrderStatus.PAID));
+        assertThat(order.getPaymentId().equals(1111L));
+    }
+
+    @Test
+    @DisplayName("Проверка подтверждения оплаты, валидация, не проходит validateSum => ошибка 422, данные о заказе не обновляются")
+    public void confirmPaymentValidationError() {
+        jdbcTemplate.execute(
+                "insert into orders (order_id, user_id, total_sum, status, payment_id) values (1, '4sus', 150.00, 'NEW', NULL)"
+        );
+
+        // when
+        given()
+                .contentType(ContentType.JSON)
+                .body(
+                        new ConfirmPaymentRequest(
+                                1L,
+                                1111L,
+                                new BigDecimal("100.00")
+                        )
+                )
+                .when()
+                .post("/orders/confirmPayment")
+                .then()
+                .statusCode(422);
+
+        //then
+        var order = jdbcTemplate.query("select * from orders", new DataClassRowMapper<>(OrderTestModel.class)).getFirst();
+
+        assertThat(order.getStatus().equals(OrderStatus.NEW));
+        assertNull(order.getPaymentId());
     }
 }
