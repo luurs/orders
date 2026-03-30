@@ -1,5 +1,6 @@
 package com.lera.orders.controller;
 
+import com.lera.orders.dto.ConfirmPaymentRequest;
 import com.lera.orders.dto.CreateOrderResponse;
 import com.lera.orders.dto.CreateOrderRequest;
 import com.lera.orders.service.OrderService;
@@ -20,5 +21,10 @@ public class OrderController {
     public CreateOrderResponse create(@RequestBody CreateOrderRequest request) {
         var orderId = orderService.createOrder(request.userId(), request.sum(), request.goods());
         return new CreateOrderResponse(orderId);
+    }
+
+    @PostMapping("/confirmPayment")
+    public void confirmPayment(@RequestBody ConfirmPaymentRequest request) {
+        orderService.confirmPayment(request.orderId(), request.paymentId(), request.sum());
     }
 }

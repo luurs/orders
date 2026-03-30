@@ -31,12 +31,16 @@ public class OrderEntity {
     @Column(name = "status", nullable = false)
     private OrderStatus status;
 
+    @Column(name = "payment_id")
+    private Long paymentId;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderGoodEntity> goods = new ArrayList<>();
 
-    public OrderEntity(String userId, BigDecimal totalSum, OrderStatus status) {
+    public OrderEntity(String userId, BigDecimal totalSum, Long paymentId, OrderStatus status) {
         this.userId = userId;
         this.totalSum = totalSum;
+        this.paymentId = paymentId;
         this.status = status;
     }
 

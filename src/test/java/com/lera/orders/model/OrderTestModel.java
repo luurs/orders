@@ -24,4 +24,7 @@ public class OrderTestModel {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private OrderStatus status;
+
+    @Column(name = "payment_id")
+    private Long paymentId;
 }
