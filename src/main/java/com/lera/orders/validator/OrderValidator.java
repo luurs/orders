@@ -30,14 +30,12 @@ public class OrderValidator {
     }
 
 
-    // валидация статуса заказа NEW иначе ошибка
     private void validateStatus(OrderEntity order) {
         if (!order.getStatus().equals(OrderStatus.NEW)) {
             throw new ValidationException("Invalid order status");
         }
     }
 
-    // валидация суммы в запросе с суммой в заказе
     private void validateSum(OrderEntity order, ConfirmPaymentRequest orderRequest) {
         if (!order.getTotalSum().equals(orderRequest.sum())) {
             throw new ValidationException("The amount in the request does not match the order amount in the database");

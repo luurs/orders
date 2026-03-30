@@ -63,15 +63,12 @@ public class OrderService {
 
     @Transactional
     public void confirmPayment(Long orderId, Long paymentId, BigDecimal sum) {
-        // получить заказ из БД
         var orderRequest = new ConfirmPaymentRequest(orderId, paymentId, sum);
         var order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ApiException("Заказ не найден, orderId: " + orderId, HttpStatus.NOT_FOUND));
 
-        // validatePayment();
         orderValidator.validatePayment(order, orderRequest);
 
-        // обновить заказ в БД (статус PAID, payment из запроса)
         order.setStatus(OrderStatus.PAID);
         order.setPaymentId(paymentId);
     }
