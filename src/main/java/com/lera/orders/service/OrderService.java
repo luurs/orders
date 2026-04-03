@@ -16,6 +16,7 @@ import com.lera.orders.validator.OrderValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CatalogClient catalogClient;
     private final OrderValidator orderValidator;
+    private final StringRedisTemplate redisTemplate;
 
     @Transactional
     public Long createOrder(String userId, BigDecimal sum, List<CreateOrderRequest.GoodDto> goods) {
