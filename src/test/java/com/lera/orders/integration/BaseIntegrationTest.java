@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -32,12 +34,16 @@ public abstract class BaseIntegrationTest {
     @LocalServerPort
     public int serverPort;
 
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
     static {
         PSQL_CONTAINER = new PostgreSQLContainer<>("postgres:16");
         PSQL_CONTAINER.start();
         wiremock = new WireMockServer(WIREMOCK_PORT);
         wiremock.start();
-        REDIS_CONTAINER = new GenericContainer<>("redis:7-alpine");
+        REDIS_CONTAINER = new GenericContainer<>("redis:7-alpine")
+                .withExposedPorts(6379);
         REDIS_CONTAINER.start();
     }
 
@@ -64,5 +70,9 @@ public abstract class BaseIntegrationTest {
     void cleanUp() {
         jdbcTemplate.execute("truncate table orders cascade;");
         jdbcTemplate.execute("truncate table orders_good cascade;");
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+            connection.serverCommands().flushAll();
+            return null;
+        });
     }
 }

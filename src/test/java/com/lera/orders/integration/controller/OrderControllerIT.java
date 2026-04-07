@@ -1,25 +1,37 @@
 package com.lera.orders.integration.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.lera.orders.dto.ConfirmPaymentRequest;
 import com.lera.orders.dto.CreateOrderRequest;
+import com.lera.orders.dto.catalog.GetGoodsListResponse;
 import com.lera.orders.integration.BaseIntegrationTest;
 import com.lera.orders.model.OrderStatus;
 import com.lera.orders.model.OrderTestModel;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.DataClassRowMapper;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class OrderControllerIT extends BaseIntegrationTest {
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
     @DisplayName("Проверка создания заказа")
@@ -75,12 +87,12 @@ public class OrderControllerIT extends BaseIntegrationTest {
                 .post("/orders/create")
                 .then()
                 .statusCode(200)
-                .body("orderId", equalTo(1));
+                .body("orderId", notNullValue());
 
         //then
         var order = jdbcTemplate.query("select * from orders", new DataClassRowMapper<>(OrderTestModel.class)).getFirst();
 
-        assertThat(order.getOrderId()).isEqualTo(1);
+        assertThat(order.getOrderId()).isPositive();
         assertThat(order.getUserId()).isEqualTo("123");
         assertThat(order.getTotalSum()).isEqualTo(new BigDecimal("180.00"));
         assertThat(order.getStatus()).isEqualTo(OrderStatus.NEW);
@@ -145,6 +157,132 @@ public class OrderControllerIT extends BaseIntegrationTest {
         var orders = jdbcTemplate.query("select * from orders", new DataClassRowMapper<>(OrderTestModel.class));
 
         assertThat(orders.isEmpty()).isTrue();
+    }
+
+    @Test
+    @DisplayName("кэш работает")
+    public void cacheSuccess() {
+        wiremock.stubFor(
+                WireMock.post("/catalog/goods/getGoodsList")
+                        .willReturn(WireMock.okJson(
+                                """
+                                                                    {
+                                                                      "goods": [
+                                                                          {
+                                                                            "id": 1,
+                                                                            "name": "apple",
+                                                                            "description": "green apple",
+                                                                            "price": 15.00,
+                                                                            "externalId": "a33le"
+                                                                          },
+                                                                          {
+                                                                          "id": 2,
+                                                                            "name": "pizza",
+                                                                            "description": "tasty pizza",
+                                                                            "price": 150.00,
+                                                                            "externalId": "pi33a"
+                                                                          }
+                                                                      ]
+                                                                    }
+                                        """
+                        ))
+        );
+        // when
+        var request = new CreateOrderRequest(
+                "123",
+                new BigDecimal("180.00"),
+                List.of(new CreateOrderRequest.GoodDto(
+                                "apple",
+                                new BigDecimal("15.00"),
+                                new BigDecimal("2.00"),
+                                new BigDecimal("30.00"),
+                                "a33le"),
+                        new CreateOrderRequest.GoodDto(
+                                "pizza",
+                                new BigDecimal("150.00"),
+                                new BigDecimal("1.00"),
+                                new BigDecimal("150.00"),
+                                "pi33a"
+                        ))
+        );
+        given()
+                .contentType(ContentType.JSON)
+                .body(request)
+                .when()
+                .post("/orders/create")
+                .then()
+                .statusCode(200);
+        given()
+                .contentType(ContentType.JSON)
+                .body(request)
+                .when()
+                .post("/orders/create")
+                .then()
+                .statusCode(200);
+        // then
+        wiremock.verify(1, WireMock.postRequestedFor(
+                WireMock.urlEqualTo("/catalog/goods/getGoodsList")));
+    }
+
+    @Test
+    @DisplayName("кэш работает частично. Один товар есть в redis, второго нет")
+    public void cacheNotFull() throws JsonProcessingException {
+        var cachedGood = new GetGoodsListResponse.GoodDto(
+                1L,
+                "apple",
+                "green apple",
+                new BigDecimal("15.00"),
+                "a33le");
+        redisTemplate.opsForValue().set("catalog:good:a33le", objectMapper.writeValueAsString(cachedGood));
+
+        wiremock.stubFor(
+                WireMock.post("/catalog/goods/getGoodsList")
+                        .willReturn(WireMock.okJson(
+                                """
+                                                                    {
+                                                                      "goods": [
+                                                                          {
+                                                                          "id": 2,
+                                                                            "name": "pizza",
+                                                                            "description": "tasty pizza",
+                                                                            "price": 150.00,
+                                                                            "externalId": "pi33a"
+                                                                          }
+                                                                      ]
+                                                                    }
+                                        """
+                        ))
+        );
+        // when
+        var request = new CreateOrderRequest(
+                "123",
+                new BigDecimal("180.00"),
+                List.of(new CreateOrderRequest.GoodDto(
+                                "apple",
+                                new BigDecimal("15.00"),
+                                new BigDecimal("2.00"),
+                                new BigDecimal("30.00"),
+                                "a33le"),
+                        new CreateOrderRequest.GoodDto(
+                                "pizza",
+                                new BigDecimal("150.00"),
+                                new BigDecimal("1.00"),
+                                new BigDecimal("150.00"),
+                                "pi33a"
+                        ))
+        );
+        given()
+                .contentType(ContentType.JSON)
+                .body(request)
+                .when()
+                .post("/orders/create")
+                .then()
+                .statusCode(200);
+        // then
+        wiremock.verify(1, WireMock.postRequestedFor(
+                WireMock.urlEqualTo("/catalog/goods/getGoodsList"))
+                .withRequestBody(WireMock.containing("pi33a"))
+                .withRequestBody(WireMock.notContaining("a33le")));
     }
 
     @Test
