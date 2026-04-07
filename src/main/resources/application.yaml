@@ -21,3 +21,7 @@ server:
   port: 8081
 feign:
   catalog.url: http://localhost:8080
+cache:
+  catalog:
+    good:
+      ttl: 1h
