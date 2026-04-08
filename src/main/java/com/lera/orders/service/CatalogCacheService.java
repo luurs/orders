@@ -31,6 +31,16 @@ public class CatalogCacheService {
         List<GetGoodsListResponse.GoodDto> foundGoods = new ArrayList<>();
         List<String> nonCachedGoodsIds = new ArrayList<>();
 
+        getFromCatalog(externalIds, foundGoods, nonCachedGoodsIds);
+
+        if (!nonCachedGoodsIds.isEmpty()) {
+            putIntoCache(nonCachedGoodsIds, foundGoods);
+        }
+
+        return new GetGoodsListResponse(foundGoods);
+    }
+
+    private void getFromCatalog(List<String> externalIds, List<GetGoodsListResponse.GoodDto> foundGoods, List<String> nonCachedGoodsIds) {
         List<String> keys = externalIds.stream()
                 .map(id -> "catalog:good:" + id)
                 .toList();
@@ -48,27 +58,25 @@ public class CatalogCacheService {
                 nonCachedGoodsIds.add(externalIds.get(i));
             }
         }
+    }
 
-        if (!nonCachedGoodsIds.isEmpty()) {
-            GetGoodsListResponse fromCatalog = catalogClient.getGoodsList(new GetGoodsListRequest(nonCachedGoodsIds));
+    private void putIntoCache(List<String> nonCachedGoodsIds, List<GetGoodsListResponse.GoodDto> foundGoods) {
+        GetGoodsListResponse fromCatalog = catalogClient.getGoodsList(new GetGoodsListRequest(nonCachedGoodsIds));
 
-            redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-                fromCatalog.goods().forEach(good -> {
-                    try {
-                        byte[] key = ("catalog:good:" + good.externalId()).getBytes();
-                        byte[] value = objectMapper.writeValueAsBytes(good);
-                        connection.stringCommands().set(key, value,
-                                Expiration.from(ttl), RedisStringCommands.SetOption.UPSERT);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-                return null;
+        redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            fromCatalog.goods().forEach(good -> {
+                try {
+                    byte[] key = ("catalog:good:" + good.externalId()).getBytes();
+                    byte[] value = objectMapper.writeValueAsBytes(good);
+                    connection.stringCommands().set(key, value,
+                            Expiration.from(ttl), RedisStringCommands.SetOption.UPSERT);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
             });
+            return null;
+        });
 
-            foundGoods.addAll(fromCatalog.goods());
-        }
-
-        return new GetGoodsListResponse(foundGoods);
+        foundGoods.addAll(fromCatalog.goods());
     }
 }
