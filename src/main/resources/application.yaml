@@ -13,7 +13,15 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:/db/changelog/db.changelog-master.yaml
+  data:
+    redis:
+      host: localhost
+      port: 6379
 server:
   port: 8081
 feign:
   catalog.url: http://localhost:8080
+cache:
+  catalog:
+    good:
+      ttl: 1h
