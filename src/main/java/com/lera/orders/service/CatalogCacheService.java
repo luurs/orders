@@ -7,7 +7,10 @@ import com.lera.orders.dto.catalog.GetGoodsListRequest;
 import com.lera.orders.dto.catalog.GetGoodsListResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.connection.RedisStringCommands;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -26,38 +29,42 @@ public class CatalogCacheService {
 
     public GetGoodsListResponse getGoods(List<String> externalIds) {
         List<GetGoodsListResponse.GoodDto> foundGoods = new ArrayList<>();
-        List<String> missing = new ArrayList<>();
+        List<String> nonCachedGoodsIds = new ArrayList<>();
 
-        for (String externalId : externalIds) {
-            String key = "catalog:good:" + externalId;
-            String cached = redisTemplate.opsForValue().get(key);
+        List<String> keys = externalIds.stream()
+                .map(id -> "catalog:good:" + id)
+                .toList();
+        List<String> values = redisTemplate.opsForValue().multiGet(keys);
 
+        for (int i = 0; i < externalIds.size(); i++) {
+            String cached = values.get(i);
             if (cached != null) {
-                GetGoodsListResponse.GoodDto dto = null;
                 try {
-                    dto = objectMapper.readValue(cached, GetGoodsListResponse.GoodDto.class);
+                    foundGoods.add(objectMapper.readValue(cached, GetGoodsListResponse.GoodDto.class));
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
                 }
-                foundGoods.add(dto);
             } else {
-                missing.add(externalId);
+                nonCachedGoodsIds.add(externalIds.get(i));
             }
         }
 
-        if (!missing.isEmpty()) {
-            GetGoodsListResponse fromCatalog = catalogClient.getGoodsList(new GetGoodsListRequest(missing));
+        if (!nonCachedGoodsIds.isEmpty()) {
+            GetGoodsListResponse fromCatalog = catalogClient.getGoodsList(new GetGoodsListRequest(nonCachedGoodsIds));
 
-            for (GetGoodsListResponse.GoodDto good : fromCatalog.goods()) {
-                String key = "catalog:good:" + good.externalId();
-                String json = null;
-                try {
-                    json = objectMapper.writeValueAsString(good);
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
-                redisTemplate.opsForValue().set(key, json, ttl);
-            }
+            redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                fromCatalog.goods().forEach(good -> {
+                    try {
+                        byte[] key = ("catalog:good:" + good.externalId()).getBytes();
+                        byte[] value = objectMapper.writeValueAsBytes(good);
+                        connection.stringCommands().set(key, value,
+                                Expiration.from(ttl), RedisStringCommands.SetOption.UPSERT);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+                return null;
+            });
 
             foundGoods.addAll(fromCatalog.goods());
         }
