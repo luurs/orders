@@ -12,7 +12,9 @@ import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,10 @@ public class RedisService {
                 .map(id -> "catalog:good:" + id)
                 .toList();
         List<String> values = redisTemplate.opsForValue().multiGet(keys);
-        return values.stream().map(value -> {
+        if (values == null) return Collections.emptyList();
+        return values.stream()
+                .filter(Objects::nonNull)
+                .map(value -> {
                     try {
                         return objectMapper.readValue(value, GetGoodsListResponse.GoodDto.class);
                     } catch (JsonProcessingException e) {

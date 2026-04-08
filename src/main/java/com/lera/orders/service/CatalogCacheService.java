@@ -20,6 +20,10 @@ public class CatalogCacheService {
     public GetGoodsListResponse getGoods(List<String> externalIds) {
         var cachedGoods = redisService.getGoodsFromCache(externalIds);
 
+        if (cachedGoods.size() == externalIds.size()) {
+            return new GetGoodsListResponse(cachedGoods);
+        }
+
         var cachedGoodsIds = cachedGoods.stream()
                 .map(GetGoodsListResponse.GoodDto::externalId)
                 .collect(Collectors.toSet());
