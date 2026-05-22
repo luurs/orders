@@ -10,6 +10,10 @@ import com.lera.orders.integration.BaseIntegrationTest;
 import com.lera.orders.model.OrderStatus;
 import com.lera.orders.model.OrderTestModel;
 import io.restassured.http.ContentType;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,12 +21,15 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.DataClassRowMapper;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static io.restassured.RestAssured.given;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -341,5 +348,49 @@ public class OrderControllerIT extends BaseIntegrationTest {
 
         assertThat(order.getStatus().equals(OrderStatus.NEW));
         assertNull(order.getPaymentId());
+    }
+
+    @Test
+    @DisplayName("кафка должна инвалидировать кэш (удалять товар при его изменении в catalog)")
+    public void kafkaMessageInvalidateCache() throws JsonProcessingException, ExecutionException, InterruptedException {
+        //given
+        var apple = new GetGoodsListResponse.GoodDto(1L, "apple", "green apple", new BigDecimal("15.00"), "a33le");
+        var pizza = new GetGoodsListResponse.GoodDto(2L, "pizza", "tasty pizza", new BigDecimal("150.00"), "pi33a");
+        redisTemplate.opsForValue().set("catalog:good:a33le", objectMapper.writeValueAsString(apple));
+        redisTemplate.opsForValue().set("catalog:good:pi33a", objectMapper.writeValueAsString(pizza));
+
+        assertThat(redisTemplate.hasKey("catalog:good:a33le")).isTrue();
+        assertThat(redisTemplate.hasKey("catalog:good:pi33a")).isTrue();
+
+        //when
+        try (var produser = createTestProducer()) {
+            String message = """
+                    {"goods": [
+                            {
+                                "id":1,
+                                "externalId":"a33le"
+                            },
+                            {
+                                "id":2,
+                                "externalId":"pi33a"
+                            }
+                        ]
+                    }
+                    """;
+            produser.send(new ProducerRecord<>("catalog.invalidate-goods-cache", message)).get();
+        }
+        //then
+        await().atMost(10, SECONDS).untilAsserted(() -> {
+            assertThat(redisTemplate.hasKey("catalog:good:a33le")).isFalse();
+            assertThat(redisTemplate.hasKey("catalog:good:pi33a")).isFalse();
+        });
+    }
+
+    private KafkaProducer<String, String> createTestProducer() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_CONTAINER.getBootstrapServers());
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        return new KafkaProducer<>(props);
     }
 }

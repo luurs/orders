@@ -60,7 +60,7 @@ public class RedisService {
 
     public void deleteGoodsFromCache(List<String> externalIds) {
         List<String> keys = externalIds.stream()
-                .map(id -> "catalog:good" + id)
+                .map(id -> "catalog:good:" + id)
                 .toList();
         redisTemplate.delete(keys);
     }

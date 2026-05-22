@@ -26,7 +26,7 @@ spring:
       auto-offset-reset: earliest
       properties:
         spring.json.trusted.packages: "*"
-        spring.json.value.default.type: com.lera.orders.dto.kafka.GoodsInvalidateMessage
+        spring.json.value.default.type: com.lera.orders.dto.catalog.kafka.GoodsInvalidateMessage
 catalog:
   kafka:
     topics:
