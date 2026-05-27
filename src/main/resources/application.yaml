@@ -17,6 +17,17 @@ spring:
     redis:
       host: localhost
       port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: orders-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+catalog:
+  kafka:
+    topics:
+      invalidate-goods-cache: catalog.invalidate-goods-cache
 server:
   port: 8081
 feign:

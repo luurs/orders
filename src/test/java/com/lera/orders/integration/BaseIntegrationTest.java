@@ -17,6 +17,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.kafka.KafkaContainer;
+import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -27,6 +29,9 @@ public abstract class BaseIntegrationTest {
     protected static final WireMockServer wiremock;
     protected static final int WIREMOCK_PORT = 8199;
     protected static final GenericContainer<?> REDIS_CONTAINER;
+    protected static final KafkaContainer KAFKA_CONTAINER = new KafkaContainer(DockerImageName.parse(
+            "apache/kafka:3.8.0")
+    );
 
     @Autowired
     protected JdbcTemplate jdbcTemplate;
@@ -45,6 +50,7 @@ public abstract class BaseIntegrationTest {
         REDIS_CONTAINER = new GenericContainer<>("redis:7-alpine")
                 .withExposedPorts(6379);
         REDIS_CONTAINER.start();
+        KAFKA_CONTAINER.start();
     }
 
     @DynamicPropertySource
@@ -58,6 +64,7 @@ public abstract class BaseIntegrationTest {
         registry.add("spring.datasource.url", PSQL_CONTAINER::getJdbcUrl);
         registry.add("spring.datasource.username", PSQL_CONTAINER::getUsername);
         registry.add("spring.datasource.password", PSQL_CONTAINER::getPassword);
+        registry.add("spring.kafka.bootstrap-servers", KAFKA_CONTAINER::getBootstrapServers);
     }
 
     @BeforeEach

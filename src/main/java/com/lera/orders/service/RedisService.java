@@ -57,4 +57,11 @@ public class RedisService {
             return null;
         });
     }
+
+    public void deleteGoodsFromCache(List<String> externalIds) {
+        List<String> keys = externalIds.stream()
+                .map(id -> "catalog:good:" + id)
+                .toList();
+        redisTemplate.delete(keys);
+    }
 }
