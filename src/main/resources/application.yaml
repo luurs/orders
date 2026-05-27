@@ -24,9 +24,6 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       auto-offset-reset: earliest
-      properties:
-        spring.json.trusted.packages: "*"
-        spring.json.value.default.type: com.lera.orders.dto.catalog.kafka.GoodsInvalidateMessage
 catalog:
   kafka:
     topics:
