@@ -10,28 +10,49 @@ spring:
       ddl-auto: none
     show-sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
-  liquibase:
+  Liquibase:
     enabled: true
     change-log: classpath:/db/changelog/db.changelog-master.yaml
   data:
     redis:
       host: localhost
       port: 6379
-  kafka:
+  Kafka:
     bootstrap-servers: localhost:9092
     consumer:
       group-id: orders-service
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       auto-offset-reset: earliest
+  cloud:
+    openFeign:
+      circuit breaker:
+        enabled: true
+resilience4j:
+  circuitbreaker:
+    instances:
+      catalog:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
 catalog:
-  kafka:
+  Kafka:
     topics:
       invalidate-goods-cache: catalog.invalidate-goods-cache
 server:
   port: 8081
 feign:
-  catalog.url: http://localhost:8080
+  catalog:
+    url: http://localhost:8080
+  client:
+    config:
+      catalog:
+        connectTimeout: 2000
+        readTimeout: 5000
 cache:
   catalog:
     good:
