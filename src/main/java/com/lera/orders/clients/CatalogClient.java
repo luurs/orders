@@ -7,8 +7,6 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-import javax.naming.ServiceUnavailableException;
-
 @FeignClient(
         name = "catalog",
         url = "${feign.catalog.url}",
